@@ -1,9 +1,5 @@
-"""
-Loads a CSV logged from log_serial_to_csv.py and plots:
-  1. Raw time-domain acceleration (X, Y, Z vs time)
-  2. FFT frequency spectrum for each axis (Z is usually most informative
-     for a vertically-mounted sensor since it carries the gravity/vibration axis)
-"""
+#Loads CSV data from MPU_csvReader.py and creates raw time-domain acceleration plots
+
 import os
 import pandas as pd
 import numpy as np
