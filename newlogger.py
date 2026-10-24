@@ -1,24 +1,14 @@
-"""
-Logs serial data from the Arduino (MPU6050 CSV stream) to a CSV file on disk.
+#Logs serial data from the Arduino (MPU6050 CSV stream) to a CSV file on disk.
 
-Setup (one time):
-    pip install pyserial
-
-Usage:
-    python log_serial_to_csv.py
-
-Then just watch the terminal - it prints each line as it's saved.
-Press Ctrl+C to stop logging (the file is saved as you go, so it's safe to stop anytime).
-"""
 
 import serial
 import time
 import sys
 
 # ---- EDIT THESE THREE LINES FOR YOUR SETUP ----
-PORT = "COM4"          # Windows looks like "COM5"; Mac/Linux looks like "/dev/tty.usbmodem14101"
+PORT = "COM4"          # Windows looks like "COM5";
 BAUD_RATE = 500000      # must match Serial.begin(...) in the Arduino sketch (500000 for MPU6050_fast_logger.ino)
-OUTPUT_FILE = "newlog_75t3.csv"   # change this per recording, e.g. "fault_mild_run1.csv"
+OUTPUT_FILE = "newlog_75t3.csv"   # change this per recording
 # -------------------------------------------------
 
 def main():
