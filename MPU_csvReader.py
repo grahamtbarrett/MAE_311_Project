@@ -4,9 +4,8 @@ import time
 import sys
 
 PORT = "COM4"               #typically like COM4 or 3
-BAUD_RATE = 115200          # must match Serial.begin(...) in the Arduino sketch
-OUTPUT_FILE = "ztest7.csv"  # change this per recording, e.g. "fault_mild_run1.csv"
-# -------------------------------------------------
+BAUD_RATE = 500000          # must match Serial.begin(...) in the Arduino sketch
+OUTPUT_FILE = "ydown_t10.csv"  # change this per recording, e.g. "fault_mild_run1.csv"
 
 def main():
     try:
@@ -31,9 +30,9 @@ def main():
                     f.write(raw_line + "\n")
                     f.flush()  # write to disk immediately so nothing is lost if you Ctrl+C
                     line_count += 1
-                    if line_count % 50 == 0:
+                    if line_count % 50 == 0:            # update the terminal every 50 lines
                         print(f"  {line_count} lines logged...")
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:                       # stopping the code manually
             print(f"\nStopped. Logged {line_count} lines to {OUTPUT_FILE}.")
         finally:
             ser.close()
