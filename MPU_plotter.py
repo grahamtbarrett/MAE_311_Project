@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # Set this to the CSV file you want to plot. If you'd rather pass it on the
 # command line instead (MPU_plotter.py yourfile.csv), leave
 # this as None and it will use the command-line argument instead.
-FILEPATH = "battlow_t2.csv"
+FILEPATH = "B_low_batt_t6.csv"
 
 # Counts per g for the accelerometer range set in the sketch (+-4 g -> 8192).
 # Only used for CSVs with ax_raw/ay_raw/az_raw columns.
