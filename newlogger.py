@@ -8,7 +8,7 @@ import sys
 # ---- EDIT THESE THREE LINES FOR YOUR SETUP ----
 PORT = "COM4"          # Windows looks like "COM5";
 BAUD_RATE = 500000      # must match Serial.begin(...) in the Arduino sketch (500000 for MPU6050_fast_logger.ino)
-OUTPUT_FILE = "B_low_batt_t6.csv"   # change this per recording
+OUTPUT_FILE = "home_demo3.csv"   # change this per recording
 # -------------------------------------------------
 
 def main():

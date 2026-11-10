@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 # Set this to the CSV file you want to plot. If you'd rather pass it on the
 # command line instead (MPU_plotter.py yourfile.csv), leave
 # this as None and it will use the command-line argument instead.

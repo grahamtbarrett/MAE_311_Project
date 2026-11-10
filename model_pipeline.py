@@ -8,6 +8,14 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.metrics import confusion_matrix, accuracy_score
+import joblib
+from IMU_calibration import load_calibration, correct
+import json
+
+
+
+S_cal, B_cal = load_calibration(Path(__file__).with_name("imu_calibration.json"))          #load calibrated data
+
 
 def load_recording(filepath):
     #input filepath for data
@@ -22,8 +30,9 @@ def load_recording(filepath):
 
     raw = df[["ax_raw", "ay_raw", "az_raw"]].values.astype(float)
     acc = raw/8192 *9.80665                             # m/s^2
+    acc = correct(acc, S_cal, B_cal)                    # calibrate data
     trim = int(2 * fs)
-    acc = acc[trim:-int(1 * fs)]
+    acc = acc[trim:-int(1 * fs)]                        #trim ends of data for any uncertainty
     return acc, fs
 
 def make_windows(acc, fs, win_s=1, overlap = 0.5):
@@ -80,6 +89,26 @@ def build_dataset(recordings):
             groups.append(group)
     return np.array(X), np.array(y), np.array(groups)
 
+def score_recording(path, model):
+    acc, fs = load_recording(path)                         # same preprocessing as training
+    feats = np.array([window_features(w, fs) for w in make_windows(acc, fs)])
+    return model.predict_proba(feats)[:, 1]
+
+def diagnose(path, model, uncertain_band=0.15):
+    p_fault = score_recording(path, model)                 #probability for each pari in w
+    mean_p, spread = p_fault.mean(), p_fault.std()         #stat values
+    if abs(mean_p - 0.5) < uncertain_band:
+        verdict = "UNCERTAIN"
+    else:
+        verdict = "FAULTY" if mean_p > 0.5 else "HEALTHY"
+    print("=" * 44)
+    print(f" File:        {Path(path).name}")
+    print(f" Windows:     {len(p_fault)}  (1 s each)")
+    print(f" RESULT:      {verdict}")
+    print(f" Confidence:  {100 * max(mean_p, 1 - mean_p):.0f}%  (+/- {100 * spread:.0f}% between windows)")
+    print(f" Windows voting faulty: {int((p_fault > 0.5).sum())} of {len(p_fault)}")
+    print("=" * 44)
+
 if __name__ == "__main__":
 
     features = ["rms_x", "rms_y", "rms_z", "kurt_x", "kurt_y", "kurt_z",
@@ -99,8 +128,22 @@ if __name__ == "__main__":
     #print("f1 = %.1f Hz" % feat[9])
     #print(np.round(feat,3))
     #print(feat)
-    data_dir = Path("model_data")
-    recordings = [ (data_dir/ "A_low_healthy_t1.csv", 0, "A_low_healthy_1"),
+    data_dir = Path("model_train_data")
+
+    levels = {"healthy": 0, "1tape": 1, "2tape": 2, "batt": 3}
+    level_names = ["healthy", "1 wrap", "2 wraps", "batt"]
+
+    recordings, level_of = [] , {}
+    for p in sorted(data_dir.glob("*.csv")):
+        parts = p.stem.split("_")                       #breaks down csv into "words" to check if its in correct format
+        if len(parts) < 3 or parts[2] not in levels:
+            continue
+        level = levels[parts[2]]
+        recordings.append((p, int(level>0), p.stem))    # 0: healthy, 1:faulty, group recordings
+        level_of[p.stem] = level
+
+
+    """recordings = [ (data_dir/ "A_low_healthy_t1.csv", 0, "A_low_healthy_1"),
                    (data_dir/ "A_low_healthy_t2.csv", 0, "A_low_healthy_2"),
                    (data_dir/ "A_low_healthy_t3.csv", 0, "A_low_healthy_3"),
                    (data_dir / "B_low_healthy_t1.csv", 0, "B_low_healthy_1"),
@@ -109,15 +152,17 @@ if __name__ == "__main__":
                    (data_dir/ "B_low_batt_t1.csv", 1, "B_low_batt_1"),
                    (data_dir/ "B_low_batt_t2.csv", 1, "B_low_batt_2"),
                    (data_dir/ "B_low_batt_t3.csv", 1, "B_low_batt_3")]
+    """
     X, y, groups = build_dataset(recordings)
-    print("X:", X.shape, " y counts:", np.bincount(y), " recordings:", len(set(groups)))
+    levels = np.array([level_of[g] for g in groups])
+    print("X:", X.shape, " recordings:", len(set(groups)), " healthy/fault windows:", np.bincount(y))
 
     models = {
         "logistic regression": make_pipeline(StandardScaler(),
                                              LogisticRegression(max_iter=1000, class_weight="balanced")),
         "random forest": RandomForestClassifier(n_estimators=200, class_weight="balanced", random_state=0),
     }
-    cv = StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=0)
+    cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=0)
     for name, model in models.items():
         y_predictions = cross_val_predict(model, X, y, cv=cv, groups=groups)
         print("\n" + name)
@@ -125,7 +170,28 @@ if __name__ == "__main__":
         print("confusion matrix (rows = true, columns = predicted):")
         print(confusion_matrix(y, y_predictions))
 
+    for lvl, name in enumerate(level_names):                            #how much its faulty
+        m = levels == lvl
+        print(f" {name:<8} windows called faulty: {100 * (y_predictions[m] ==1).mean():.1f}%")
+
     forest = models["random forest"].fit(X, y)
     order = np.argsort(forest.feature_importances_)[::-1]
     for i in order:
         print(f"{features[i]:<12} {forest.feature_importances_[i]:.3f}")
+
+    joblib.dump(forest, "fault_model.joblib")                   #final model
+    print("\n Saved model to fault_model.joblib")
+
+    amp_idx = features.index("amp_1x")
+    summary = []
+    print("\n1x amplitude by condition (mean of recordings +/- standard error):")
+    for lvl, name in enumerate(level_names):
+        recs = sorted(g for g, l in level_of.items() if l == lvl)
+        per_rec = np.array([X[groups == g, amp_idx].mean() for g in recs])
+        sd, n = per_rec.std(ddof=1), len(per_rec)
+        print(f"  {name:<8} n={n:2d}  {per_rec.mean():.3f} +/- {sd / np.sqrt(n):.3f} m/s^2   (spread {sd:.3f})")
+        summary.append({"condition": name, "n": n, "mean": float(per_rec.mean()),
+                        "se": float(sd / np.sqrt(n)), "sd": float(sd)})
+
+    with open("measurement_summary.json", "w") as f:
+        json.dump(summary, f, indent=2)

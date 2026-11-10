@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-03",
+  "date": "2026-11-09",
   "settings": {
     "accel_range_g": 4,
     "filter_bandwidth_hz": 184
@@ -74,5 +74,9 @@
     "zdown": 10,
     "zup": 10
   },
-  "validation": null
+  "validation": {
+    "rms_raw": 0.6380667348419727,
+    "rms_corrected": 0.06176677019560269,
+    "n_files": 4
+  }
 }

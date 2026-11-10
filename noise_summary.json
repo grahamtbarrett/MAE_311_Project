@@ -1,0 +1,8 @@
+{
+  "source": "allanvar_t2.csv, 42.3 min at about 655 Hz",
+  "axes": {
+    "x": {"N": 0.00140, "density": 0.00197, "bias_instability": 0.00034},
+    "y": {"N": 0.00182, "density": 0.00257, "bias_instability": null},
+    "z": {"N": 0.00208, "density": 0.00294, "bias_instability": 0.00051}
+  }
+}
