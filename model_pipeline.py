@@ -182,7 +182,7 @@ if __name__ == "__main__":
     joblib.dump(forest, "fault_model.joblib")                   #final model
     print("\n Saved model to fault_model.joblib")
 
-    amp_idx = features.index("amp_1x")
+    amp_idx = features.index("amp_1x")                                  #showing the uncertainties in the 1x amp
     summary = []
     print("\n1x amplitude by condition (mean of recordings +/- standard error):")
     for lvl, name in enumerate(level_names):
